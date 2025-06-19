@@ -1,0 +1,10 @@
+torch>=1.12
+torchvision
+numpy
+Pillow
+tqdm
+matplotlib
+scikit-image
+opencv-python
+segment-anything @ git+https://github.com/facebookresearch/segment-anything.git
+monai
