@@ -1,5 +1,4 @@
 # A customized implementation of both Dice Loss and BCE Loss. is implemented
-
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
@@ -15,8 +14,7 @@ def dice_loss(pred, target, smooth=1.0):
     Returns:
         Tensor: Computed Dice Loss.
     """
-    
-    
+
     pred = torch.sigmoid(pred)
     pred = pred.view(-1)
     target = target.view(-1)
@@ -39,6 +37,7 @@ class DiceBCELoss(nn.Module):
         return dice + bce
     
 def iou_score(pred, target, threshold=0.5, eps=1e-6):
+    
     """
     Compute Intersection over Union (IoU) score.
     
