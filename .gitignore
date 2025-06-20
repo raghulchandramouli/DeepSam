@@ -1,0 +1,3 @@
+checkpoints/
+best_model/
+*.pth

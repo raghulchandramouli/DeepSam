@@ -17,7 +17,7 @@ MODEL_TYPE = "vit_b"
 DEVICE = "cuda" if torch.cuda.is_available() else "cpu"
 BATCH_SIZE = 32
 EPOCHS = 10
-LR = 1e-4
+LR = 3e-5
 VAL_SPLIT = 0.2
 
 # Loader & Model
