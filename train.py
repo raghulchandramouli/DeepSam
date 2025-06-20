@@ -2,20 +2,20 @@
 
 import os
 import torch
-import torch.nn.Functional as F
+import torch.nn.functional as F
 from torch.utils.data import DataLoader, random_split
 from tqdm import tqdm
 
 from data_loader.inpainting_dataset import InpaintingDataset
 from models.sam_model import load_sam_model
-from losses.dice_loss import DiceBCELossm, iou_score
+from losses.dice_loss import DiceBCELoss, iou_score
 
 # Configs:
 DATA_ROOT = "/mnt/g/Authenta/data/authenta-inpainting-detection/dataset"
-CHECKPOINT_PATH = "sam_vit_b.pth"
+CHECKPOINT_PATH = "checkpoints/sam_vit_b.pth"
 MODEL_TYPE = "vit_b"
 DEVICE = "cuda" if torch.cuda.is_available() else "cpu"
-BATCH_SIZE = 4
+BATCH_SIZE = 32
 EPOCHS = 10
 LR = 1e-4
 VAL_SPLIT = 0.2
@@ -29,7 +29,106 @@ train_set, val_set = random_split(dataset, [train_size, val_size])
 train_loader = DataLoader(train_set, batch_size=BATCH_SIZE, shuffle=True)
 val_loader = DataLoader(val_set, batch_size=1, shuffle=False)
 
-sam = load_sam_model(model_type=MODEL_TYPE, checkpoint_path=CHECKPOINT_PATH, device=DEVICE)
-criterion = DiceBCELoss()
+sam = load_sam_model(model_type=MODEL_TYPE, checkpoint_path=CHECKPOINT_PATH)
+sam = sam.to(device=DEVICE)
+criterion = DiceBCELoss().to(DEVICE)
 optimizer = torch.optim.Adam(sam.mask_decoder.parameters(), lr=LR)
+
+# Training Loop 
+for epoch in range(EPOCHS):
+    sam.train()
+    total_loss, total_iou = 0.0, 0.0
+    loop = tqdm(train_loader, desc=f"Epoch {epoch+1} [Train]", leave=False)
+
+    for batch in loop:
+        imgs = batch['image'].to(DEVICE)
+        masks_gt = batch['mask'].unsqueeze(1).to(DEVICE)
+        points = batch['point'].to(DEVICE)
+
+        B = imgs.size(0)
+        optimizer.zero_grad()
+        loss_batch, iou_batch = 0.0, 0.0
+
+        for i in range(B):
+            img = imgs[i].unsqueeze(0)
+            mask_gt = masks_gt[i].unsqueeze(0)
+            point = points[i].unsqueeze(0).unsqueeze(0)
+            label = torch.tensor([[1]], device=DEVICE)
+
+            with torch.no_grad():
+                img_embed = sam.image_encoder(img)
+
+            sparse_embed, dense_embed = sam.prompt_encoder(
+                points=(point, label), boxes=None, masks=None
+            )
+
+            low_res_logits, _ = sam.mask_decoder(
+                image_embeddings=img_embed,
+                image_pe=sam.prompt_encoder.get_dense_pe(),
+                sparse_prompt_embeddings=sparse_embed,
+                dense_prompt_embeddings=dense_embed,
+                multimask_output=False
+            )
+
+            pred = F.interpolate(low_res_logits, size=mask_gt.shape[-2:], mode='bilinear', align_corners=False)
+
+            loss = criterion(pred, mask_gt)
+            iou = iou_score(pred, mask_gt)
+
+            loss.backward()
+            loss_batch += loss.item()
+            iou_batch += iou.item()
+
+        optimizer.step()
+        total_loss += loss_batch
+        total_iou += iou_batch
+        loop.set_postfix(loss=loss_batch / B, iou=iou_batch / B)
+
+    avg_loss = total_loss / len(train_loader)
+    avg_iou = total_iou / len(train_loader)
+
+    # Validation
+    sam.eval()
+    val_iou_total = 0.0
+    with torch.no_grad():
+        val_loop = tqdm(val_loader, desc=f"Epoch {epoch+1} [Val]", leave=False)
+        for batch in val_loop:
+            img = batch['image'].to(DEVICE)
+            mask_gt = batch['mask'].unsqueeze(1).to(DEVICE)
+            point = batch['point'].unsqueeze(1).to(DEVICE)
+            label = torch.ones((1, 1), device=DEVICE)
+
+            img_embed = sam.image_encoder(img)
+            sparse_embed, dense_embed = sam.prompt_encoder(
+                points=(point, label), boxes=None, masks=None
+            )
+
+            low_res_logits, _ = sam.mask_decoder(
+                image_embeddings=img_embed,
+                image_pe=sam.prompt_encoder.get_dense_pe(),
+                sparse_prompt_embeddings=sparse_embed,
+                dense_prompt_embeddings=dense_embed,
+                multimask_output=False
+            )
+
+            pred = F.interpolate(low_res_logits, size=mask_gt.shape[-2:], mode='bilinear', align_corners=False)
+            val_iou = iou_score(pred, mask_gt)
+            val_iou_total += val_iou.item()
+            val_loop.set_postfix(iou=val_iou.item())
+
+    avg_val_iou = val_iou_total / len(val_loader)
+    print(f"✅ Epoch {epoch+1} | Train Loss: {avg_loss:.4f} | Train IoU: {avg_iou:.4f} | Val IoU: {avg_val_iou:.4f}")
+
+    # Save the trained model
+    os.makedirs("best_model", exist_ok=True)
+    torch.save({
+        "mask_decoder": sam.mask_decoder.state_dict(),
+        "optimizer": optimizer.state_dict(),
+        "epoch": epoch + 1,
+        "train_loss": avg_loss,
+        "train_iou": avg_iou,
+        "val_iou": avg_val_iou,
+    }, "best_model/sam_mask_decoder.pth")
+
+    print("✅ Model checkpoint saved at 'best_model/sam_mask_decoder.pth'")
 

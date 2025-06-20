@@ -25,13 +25,14 @@ class InpaintingDataset(Dataset):
             os.path.splitext(f)[0].split('_')[-1]: f
             for f in os.listdir(self.mask_dir) if f.endswith('.png')
         } 
+
         
-        common_ids = set(sellf.image_files.keys()) & set(self.mask_files.keys())
+        common_ids = set(self.image_files.keys()) & set(self.mask_files.keys())
         self.matching_pairs = sorted([
-            (self.image_files[i], self.mask_files[i] for i in common_ids)
+            (self.image_files[i], self.mask_files[i]) for i in common_ids
         ])
         
-        self.target_size = (512, 512)
+        self.target_size = (1024, 1024)
         self.transform = transform
         print(f"Found {len(self.matching_pairs)} matching image-mask pairs.")
         

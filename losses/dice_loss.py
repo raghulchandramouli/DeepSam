@@ -27,14 +27,23 @@ class DiceBCELoss(nn.Module):
     """
     A combined loss function that includes both Dice Loss and Binary Cross-Entropy Loss.
     """
-    def __init__(self):
+    def __init__(self, weight=None):
         super(DiceBCELoss, self).__init__()
-        self.bce_loss = nn.BCEWithLogitsLoss()
-        
+        self.bce = nn.BCEWithLogitsLoss(weight=weight)
+
     def forward(self, pred, target):
-        dice = dice_loss(pred, target)
-        bce = self.bce(pred, target)
-        return dice + bce
+        # BCE Loss
+        bce_loss = self.bce(pred, target)
+        
+        # Dice Loss
+        pred_sigmoid = torch.sigmoid(pred)
+        intersection = (pred_sigmoid * target).sum()
+        union = pred_sigmoid.sum() + target.sum()
+        
+        dice_loss = 1 - (2.0 * intersection + 1e-7) / (union + 1e-7)
+        
+        # Combined loss
+        return bce_loss + dice_loss
     
 def iou_score(pred, target, threshold=0.5, eps=1e-6):
     

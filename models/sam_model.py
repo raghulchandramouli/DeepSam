@@ -1,22 +1,20 @@
-import torch
 from segment_anything import sam_model_registry
 
-def load_sam_model(model_type='vit_b', checkpoint_path=None):
+def load_sam_model(model_type, checkpoint_path, device='cuda'):
     """
-    Load a Segment Anything Model (SAM) from the specified checkpoint.
-    
+    Load a SAM model with specified configuration
     Args:
-        model_type (str): Type of SAM model to load. Default is 'vit_b'.
-        checkpoint_path (str): Path to the model checkpoint. If None, uses the default model.
-        
+        model_type (str): Type of SAM model ('vit_h', 'vit_l', 'vit_b')
+        checkpoint_path (str): Path to model checkpoint
+        device (str): Device to load model on ('cuda' or 'cpu')
     Returns:
-        sam_model: Loaded SAM model.
+        model: Loaded SAM model
     """
+    # Initialize model
+    model = sam_model_registry[model_type](checkpoint=checkpoint_path)
     
-    assert model_type in ['vit_b', 'vit_l', 'vit_h'], "Invalid model type. Choose from 'vit_b', 'vit_l', or 'vit_h'."
-    if device is None:
-        device = "cuda" if torch.cuda.is_available() else "cpu"
-        
-    sam_model = sam_model_registry[model_type](checkpoint=checkpoint_path) 
-    sam_model.to(device=device)
-    return sam_model 
+    # Move to specified device
+    model = model.to(device)
+    model.eval()
+    
+    return model
