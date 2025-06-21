@@ -3,3 +3,4 @@ best_model/
 *.pth
 triplet_outputs/
 triplet_outputs_visualizer/
+triplet_outputs.zip
