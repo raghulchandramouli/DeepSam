@@ -1,5 +1,3 @@
-# Train.py
-
 import os
 import torch
 import torch.nn.functional as F
@@ -10,17 +8,18 @@ from data_loader.inpainting_dataset import InpaintingDataset
 from models.sam_model import load_sam_model
 from losses.dice_loss import DiceBCELoss, iou_score
 
-# Configs:
+# -------------------- Configs --------------------
 DATA_ROOT = "/mnt/g/Authenta/data/authenta-inpainting-detection/dataset"
 CHECKPOINT_PATH = "checkpoints/sam_vit_b.pth"
+RESUME_CHECKPOINT = "best_model/sam_mask_decoder.pth"
 MODEL_TYPE = "vit_b"
 DEVICE = "cuda" if torch.cuda.is_available() else "cpu"
 BATCH_SIZE = 32
-EPOCHS = 10
+EPOCHS = 15
 LR = 3e-5
 VAL_SPLIT = 0.2
 
-# Loader & Model
+# ------------------ Dataset & Loaders ------------------
 dataset = InpaintingDataset(data_root=DATA_ROOT)
 val_size = int(VAL_SPLIT * len(dataset))
 train_size = len(dataset) - val_size
@@ -29,13 +28,26 @@ train_set, val_set = random_split(dataset, [train_size, val_size])
 train_loader = DataLoader(train_set, batch_size=BATCH_SIZE, shuffle=True)
 val_loader = DataLoader(val_set, batch_size=1, shuffle=False)
 
+# ------------------ Model ------------------
 sam = load_sam_model(model_type=MODEL_TYPE, checkpoint_path=CHECKPOINT_PATH)
 sam = sam.to(device=DEVICE)
 criterion = DiceBCELoss().to(DEVICE)
 optimizer = torch.optim.Adam(sam.mask_decoder.parameters(), lr=LR)
 
-# Training Loop 
-for epoch in range(EPOCHS):
+# ------------------ Resume Logic ------------------
+start_epoch = 0
+if os.path.exists(RESUME_CHECKPOINT):
+    print(f"✅ Loading checkpoint from {RESUME_CHECKPOINT}")
+    checkpoint = torch.load(RESUME_CHECKPOINT, map_location=DEVICE)
+    sam.mask_decoder.load_state_dict(checkpoint["mask_decoder"])
+    optimizer.load_state_dict(checkpoint["optimizer"])
+    start_epoch = checkpoint["epoch"]
+    print(f"🔁 Resuming training from epoch {start_epoch}")
+else:
+    print("🆕 No checkpoint found, starting from scratch.")
+
+# ------------------ Training Loop ------------------
+for epoch in range(start_epoch, EPOCHS):
     sam.train()
     total_loss, total_iou = 0.0, 0.0
     loop = tqdm(train_loader, desc=f"Epoch {epoch+1} [Train]", leave=False)
@@ -87,7 +99,7 @@ for epoch in range(EPOCHS):
     avg_loss = total_loss / len(train_loader)
     avg_iou = total_iou / len(train_loader)
 
-    # Validation
+    # ------------------ Validation ------------------
     sam.eval()
     val_iou_total = 0.0
     with torch.no_grad():
@@ -119,7 +131,7 @@ for epoch in range(EPOCHS):
     avg_val_iou = val_iou_total / len(val_loader)
     print(f"✅ Epoch {epoch+1} | Train Loss: {avg_loss:.4f} | Train IoU: {avg_iou:.4f} | Val IoU: {avg_val_iou:.4f}")
 
-    # Save the trained model
+    # ------------------ Save Checkpoint ------------------
     os.makedirs("best_model", exist_ok=True)
     torch.save({
         "mask_decoder": sam.mask_decoder.state_dict(),
@@ -131,4 +143,3 @@ for epoch in range(EPOCHS):
     }, "best_model/sam_mask_decoder.pth")
 
     print("✅ Model checkpoint saved at 'best_model/sam_mask_decoder.pth'")
-
