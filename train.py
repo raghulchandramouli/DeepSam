@@ -1,3 +1,5 @@
+# Train.py
+
 import os
 import torch
 import torch.nn.functional as F
@@ -15,7 +17,7 @@ RESUME_CHECKPOINT = "best_model/sam_mask_decoder.pth"
 MODEL_TYPE = "vit_b"
 DEVICE = "cuda" if torch.cuda.is_available() else "cpu"
 BATCH_SIZE = 32
-EPOCHS = 15
+EPOCHS = 25
 LR = 3e-5
 VAL_SPLIT = 0.2
 
@@ -50,7 +52,8 @@ else:
 for epoch in range(start_epoch, EPOCHS):
     sam.train()
     total_loss, total_iou = 0.0, 0.0
-    loop = tqdm(train_loader, desc=f"Epoch {epoch+1} [Train]", leave=False)
+    sample_count = 0
+    loop = tqdm(train_loader, desc=f"Epoch {epoch+1} [Train]", leave=True)
 
     for batch in loop:
         imgs = batch['image'].to(DEVICE)
@@ -94,16 +97,17 @@ for epoch in range(start_epoch, EPOCHS):
         optimizer.step()
         total_loss += loss_batch
         total_iou += iou_batch
+        sample_count += B
         loop.set_postfix(loss=loss_batch / B, iou=iou_batch / B)
 
-    avg_loss = total_loss / len(train_loader)
-    avg_iou = total_iou / len(train_loader)
+    avg_loss = total_loss / sample_count
+    avg_iou = total_iou / sample_count
 
     # ------------------ Validation ------------------
     sam.eval()
     val_iou_total = 0.0
     with torch.no_grad():
-        val_loop = tqdm(val_loader, desc=f"Epoch {epoch+1} [Val]", leave=False)
+        val_loop = tqdm(val_loader, desc=f"Epoch {epoch+1} [Val]", leave=True)
         for batch in val_loop:
             img = batch['image'].to(DEVICE)
             mask_gt = batch['mask'].unsqueeze(1).to(DEVICE)
@@ -128,8 +132,8 @@ for epoch in range(start_epoch, EPOCHS):
             val_iou_total += val_iou.item()
             val_loop.set_postfix(iou=val_iou.item())
 
-    avg_val_iou = val_iou_total / len(val_loader)
-    print(f"✅ Epoch {epoch+1} | Train Loss: {avg_loss:.4f} | Train IoU: {avg_iou:.4f} | Val IoU: {avg_val_iou:.4f}")
+    avg_val_iou = val_iou_total / len(val_loader.dataset)
+    tqdm.write(f"✅ Epoch {epoch+1} | Train Loss: {avg_loss:.4f} | Train IoU: {avg_iou:.4f} | Val IoU: {avg_val_iou:.4f}")
 
     # ------------------ Save Checkpoint ------------------
     os.makedirs("best_model", exist_ok=True)
@@ -142,4 +146,4 @@ for epoch in range(start_epoch, EPOCHS):
         "val_iou": avg_val_iou,
     }, "best_model/sam_mask_decoder.pth")
 
-    print("✅ Model checkpoint saved at 'best_model/sam_mask_decoder.pth'")
+    tqdm.write("✅ Model checkpoint saved at 'best_model/sam_mask_decoder.pth'")
