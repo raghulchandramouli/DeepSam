@@ -10,7 +10,6 @@ from data_loader.inpainting_dataset import InpaintingDataset
 from models.sam_model import load_sam_model
 from losses.dice_loss import DiceBCELoss, iou_score
 
-# -------------------- Configs --------------------
 DATA_ROOT = "/mnt/g/Authenta/data/authenta-inpainting-detection/dataset"
 CHECKPOINT_PATH = "checkpoints/sam_vit_b.pth"
 RESUME_CHECKPOINT = "best_model/sam_mask_decoder.pth"
