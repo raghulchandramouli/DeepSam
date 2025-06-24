@@ -11,9 +11,9 @@ from models.sam_model import load_sam_model
 from losses.dice_loss import DiceBCELoss, iou_score
 
 DATA_ROOT = "/mnt/g/Authenta/data/authenta-inpainting-detection/dataset"
-CHECKPOINT_PATH = "checkpoints/sam_vit_b.pth"
+CHECKPOINT_PATH = "checkpoints/sam_vit_h.pth"
 RESUME_CHECKPOINT = "best_model/sam_mask_decoder.pth"
-MODEL_TYPE = "vit_b"
+MODEL_TYPE = "vit_h"
 DEVICE = "cuda" if torch.cuda.is_available() else "cpu"
 BATCH_SIZE = 32
 EPOCHS = 25
@@ -146,3 +146,5 @@ for epoch in range(start_epoch, EPOCHS):
     }, "best_model/sam_mask_decoder.pth")
 
     tqdm.write("✅ Model checkpoint saved at 'best_model/sam_mask_decoder.pth'")
+    
+    
