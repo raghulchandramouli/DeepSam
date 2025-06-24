@@ -1,4 +1,4 @@
-# Train.py
+# train.py
 
 import os
 import torch
@@ -10,9 +10,10 @@ from data_loader.inpainting_dataset import InpaintingDataset
 from models.sam_model import load_sam_model
 from losses.dice_loss import DiceBCELoss, iou_score
 
+# -------------------- Configs --------------------
 DATA_ROOT = "/mnt/g/Authenta/data/authenta-inpainting-detection/dataset"
-CHECKPOINT_PATH = "checkpoints/sam_vit_h.pth"
-RESUME_CHECKPOINT = "best_model/sam_mask_decoder.pth"
+CHECKPOINT_PATH = "checkpoints/sam_vit_h_4b8939.pth"  # vit_h model checkpoint
+RESUME_CHECKPOINT = "best_model_vit_h/sam_mask_decoder.pth"
 MODEL_TYPE = "vit_h"
 DEVICE = "cuda" if torch.cuda.is_available() else "cpu"
 BATCH_SIZE = 32
@@ -35,24 +36,12 @@ sam = sam.to(device=DEVICE)
 criterion = DiceBCELoss().to(DEVICE)
 optimizer = torch.optim.Adam(sam.mask_decoder.parameters(), lr=LR)
 
-# ------------------ Resume Logic ------------------
-start_epoch = 0
-if os.path.exists(RESUME_CHECKPOINT):
-    print(f"✅ Loading checkpoint from {RESUME_CHECKPOINT}")
-    checkpoint = torch.load(RESUME_CHECKPOINT, map_location=DEVICE)
-    sam.mask_decoder.load_state_dict(checkpoint["mask_decoder"])
-    optimizer.load_state_dict(checkpoint["optimizer"])
-    start_epoch = checkpoint["epoch"]
-    print(f"🔁 Resuming training from epoch {start_epoch}")
-else:
-    print("🆕 No checkpoint found, starting from scratch.")
-
 # ------------------ Training Loop ------------------
-for epoch in range(start_epoch, EPOCHS):
+for epoch in range(1, EPOCHS + 1):
     sam.train()
     total_loss, total_iou = 0.0, 0.0
     sample_count = 0
-    loop = tqdm(train_loader, desc=f"Epoch {epoch+1} [Train]", leave=True)
+    loop = tqdm(train_loader, desc=f"Epoch {epoch} [Train]", leave=True)
 
     for batch in loop:
         imgs = batch['image'].to(DEVICE)
@@ -106,7 +95,7 @@ for epoch in range(start_epoch, EPOCHS):
     sam.eval()
     val_iou_total = 0.0
     with torch.no_grad():
-        val_loop = tqdm(val_loader, desc=f"Epoch {epoch+1} [Val]", leave=True)
+        val_loop = tqdm(val_loader, desc=f"Epoch {epoch} [Val]", leave=True)
         for batch in val_loop:
             img = batch['image'].to(DEVICE)
             mask_gt = batch['mask'].unsqueeze(1).to(DEVICE)
@@ -132,19 +121,17 @@ for epoch in range(start_epoch, EPOCHS):
             val_loop.set_postfix(iou=val_iou.item())
 
     avg_val_iou = val_iou_total / len(val_loader.dataset)
-    tqdm.write(f"✅ Epoch {epoch+1} | Train Loss: {avg_loss:.4f} | Train IoU: {avg_iou:.4f} | Val IoU: {avg_val_iou:.4f}")
+    tqdm.write(f"✅ Epoch {epoch} | Train Loss: {avg_loss:.4f} | Train IoU: {avg_iou:.4f} | Val IoU: {avg_val_iou:.4f}")
 
     # ------------------ Save Checkpoint ------------------
-    os.makedirs("best_model", exist_ok=True)
+    os.makedirs("best_model_vit_h", exist_ok=True)
     torch.save({
         "mask_decoder": sam.mask_decoder.state_dict(),
         "optimizer": optimizer.state_dict(),
-        "epoch": epoch + 1,
+        "epoch": epoch,
         "train_loss": avg_loss,
         "train_iou": avg_iou,
         "val_iou": avg_val_iou,
-    }, "best_model/sam_mask_decoder.pth")
+    }, "best_model_vit_h/sam_mask_decoder.pth")
 
-    tqdm.write("✅ Model checkpoint saved at 'best_model/sam_mask_decoder.pth'")
-    
-    
+    tqdm.write("✅ Model checkpoint saved at 'best_model_vit_h/sam_mask_decoder.pth'")
