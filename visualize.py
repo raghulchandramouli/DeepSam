@@ -8,7 +8,7 @@ from data_loader.inpainting_dataset import InpaintingDataset
 from models.sam_model import load_sam_model
 from torch.utils.data import DataLoader
 
-def visualize_triplet_and_save(sam, val_loader, output_dir="triplet_outputs_visualizer", device="cuda", num_samples=10):
+def visualize_triplet_and_save(sam, val_loader, output_dir="triplet_outputs_visualizer_single_masks", device="cuda", num_samples=10):
     os.makedirs(output_dir, exist_ok=True)
     sam.eval()
     count = 0
@@ -70,11 +70,11 @@ def visualize_triplet_and_save(sam, val_loader, output_dir="triplet_outputs_visu
 if __name__ == "__main__":
     # --- Config ---
     DEVICE = "cuda" if torch.cuda.is_available() else "cpu"
-    DATA_ROOT = "/mnt/g/Authenta/data/authenta-inpainting-detection/dataset"
-    BASE_SAM_CKPT = "checkpoints/sam_vit_b.pth"
-    TRAINED_DECODER_PATH = "best_model/sam_mask_decoder.pth"
-    MODEL_TYPE = "vit_b"
-    OUTPUT_DIR = os.path.join(os.path.dirname(__file__), "triplet_outputs_visualizer")
+    DATA_ROOT = "/mnt/g/Authenta/data/authenta-inpainting-detection/single_mask"
+    BASE_SAM_CKPT = "checkpoints/sam_vit_h_4b8939.pth"
+    TRAINED_DECODER_PATH = "best_model_vit_h/sam_mask_decoder.pth"
+    MODEL_TYPE = "vit_h"
+    OUTPUT_DIR = os.path.join(os.path.dirname(__file__), "triplet_outputs_visualizer_single_masks")
     NUM_SAMPLES = 100
 
     # --- Load Data & Model ---

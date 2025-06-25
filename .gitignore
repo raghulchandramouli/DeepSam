@@ -5,3 +5,4 @@ best_model_vit_h/
 triplet_outputs/
 triplet_outputs_visualizer/
 triplet_outputs.zip
+triplet_outputs_visualizer_single_masks/
