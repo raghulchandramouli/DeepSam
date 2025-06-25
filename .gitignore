@@ -1,5 +1,6 @@
 checkpoints/
 best_model/
+best_model_vit_h/
 *.pth
 triplet_outputs/
 triplet_outputs_visualizer/

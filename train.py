@@ -11,15 +11,16 @@ from models.sam_model import load_sam_model
 from losses.dice_loss import DiceBCELoss, iou_score
 
 # -------------------- Configs --------------------
-DATA_ROOT = "/mnt/g/Authenta/data/authenta-inpainting-detection/dataset"
+DATA_ROOT = "/mnt/g/Authenta/data/authenta-inpainting-detection/single_mask"
 CHECKPOINT_PATH = "checkpoints/sam_vit_h_4b8939.pth"  # vit_h model checkpoint
-RESUME_CHECKPOINT = "best_model_vit_h/sam_mask_decoder.pth"
+#RESUME_CHECKPOINT = "best_model_single_masks/sam_mask_decoder.pth"
 MODEL_TYPE = "vit_h"
 DEVICE = "cuda" if torch.cuda.is_available() else "cpu"
 BATCH_SIZE = 32
 EPOCHS = 25
 LR = 3e-5
 VAL_SPLIT = 0.2
+SAVE_DIR = "best_model_single_masks"
 
 # ------------------ Dataset & Loaders ------------------
 dataset = InpaintingDataset(data_root=DATA_ROOT)
@@ -124,7 +125,7 @@ for epoch in range(1, EPOCHS + 1):
     tqdm.write(f"✅ Epoch {epoch} | Train Loss: {avg_loss:.4f} | Train IoU: {avg_iou:.4f} | Val IoU: {avg_val_iou:.4f}")
 
     # ------------------ Save Checkpoint ------------------
-    os.makedirs("best_model_vit_h", exist_ok=True)
+    os.makedirs(SAVE_DIR, exist_ok=True)
     torch.save({
         "mask_decoder": sam.mask_decoder.state_dict(),
         "optimizer": optimizer.state_dict(),
@@ -132,6 +133,6 @@ for epoch in range(1, EPOCHS + 1):
         "train_loss": avg_loss,
         "train_iou": avg_iou,
         "val_iou": avg_val_iou,
-    }, "best_model_vit_h/sam_mask_decoder.pth")
+    }, f"{SAVE_DIR}/sam_mask_decoder.pth")
 
-    tqdm.write("✅ Model checkpoint saved at 'best_model_vit_h/sam_mask_decoder.pth'")
+    tqdm.write(f"✅ Model checkpoint saved at '{SAVE_DIR}/sam_mask_decoder.pth'")
