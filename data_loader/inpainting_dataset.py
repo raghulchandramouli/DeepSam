@@ -9,25 +9,24 @@ class InpaintingDataset(Dataset):
     
     def __init__(
         self, 
-        data_root = "/mnt/g/Authenta/data/authenta-inpainting-detection/single_mask",
+        data_root = "/mnt/g/Authenta/data/authenta-remaskable-inpainting-detection/Remaskable_generation",
         transform = None
     ):
         
         self.image_dir = os.path.join(data_root, "Inpainting")
         self.mask_dir = os.path.join(data_root, "masks")
         
-        # print(f"Image dir: {self.image_dir}")
-        # print(f"Mask dir: {self.mask_dir}")
-        # print(f"Image files: {os.listdir(self.image_dir)}")
-        # print(f"Mask files: {os.listdir(self.mask_dir)}")
+        #print(f"Image dir: {self.image_dir}")
+        #print(f"Mask dir: {self.mask_dir}")
+        #print(f"Image files: {os.listdir(self.image_dir)}")
+        #print(f"Mask files: {os.listdir(self.mask_dir)}")
         
         self.image_files = {
-            os.path.splitext(f)[0].split('_')[0]: f
-            for f in os.listdir(self.image_dir) if f.endswith('.jpg')
+            os.path.splitext(f)[0].split('_')[-1]: f
+            for f in os.listdir(self.image_dir) if f.endswith('.png')
         }
-        
         self.mask_files = {
-            os.path.splitext(f)[0].split('_')[0]: f
+            os.path.splitext(f)[0].split('_')[-1]: f
             for f in os.listdir(self.mask_dir) if f.endswith('.png')
         } 
 

@@ -11,13 +11,13 @@ from models.sam_model import load_sam_model
 from losses.dice_loss import DiceBCELoss, iou_score
 
 # -------------------- Configs --------------------
-DATA_ROOT = "/mnt/g/Authenta/data/authenta-inpainting-detection/single_mask"
+DATA_ROOT = "/mnt/g/Authenta/data/authenta-remaskable-inpainting-detection/Remaskable_generation"
 CHECKPOINT_PATH = "checkpoints/sam_vit_h_4b8939.pth"  # vit_h model checkpoint
 #RESUME_CHECKPOINT = "best_model_single_masks/sam_mask_decoder.pth"
 MODEL_TYPE = "vit_h"
 DEVICE = "cuda" if torch.cuda.is_available() else "cpu"
-BATCH_SIZE = 32
-EPOCHS = 25
+BATCH_SIZE = 16
+EPOCHS = 6
 LR = 3e-5
 VAL_SPLIT = 0.2
 SAVE_DIR = "best_model_single_masks"
